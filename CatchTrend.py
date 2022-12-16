@@ -1,5 +1,8 @@
 import time
 import pandas as pd 
+import uuid
+import numpy as np
+
 from pytwitter import Api
 from helper.Tweet import Tweet
 from helper.connect_twitter import connect_twitter
@@ -71,7 +74,6 @@ class CatchTrend():
 
         df_users_merge = pd.DataFrame(users_merge, columns=["user_id", "username", "count_follows"])
         df_users_merge = df_users_merge.drop_duplicates()
-        df_users_merge.to_csv("data/test_dup.csv")
 
         l_tweets = [t.to_list() for t in tweets]
 
@@ -80,11 +82,32 @@ class CatchTrend():
         df_final = df_users_merge.merge(df, left_on="username", right_on="user_retweet")
         df_final = df_final[["user_id_x", "user_id_y", "username_x", "username_y"]]
         
-        df_final.to_csv("data/user_merge.csv")
-        df.to_json("data/tweet.json", orient="records")
+        df_final.to_csv("data/user_merge_1.csv")
+
+        df_tweet_tweet = df[["text"]]
+        df_tweet_unique = df_tweet_tweet.drop_duplicates(subset=["text"])
+        df_tweet_unique["id_text"] = df_tweet_unique["text"].apply(lambda x : uuid.uuid1())
+        df_tweet_unique["id_text"] = df_tweet_unique["id_text"].astype(str)
+
+        df_tweet = df.merge(df_tweet_unique, on=["text"])
+        print(df_tweet)
+        df_tweet["text_final"] = df_tweet.apply(lambda x: self.prep_tweet(x), axis=1)
+
+        df_tweet.to_json("data/tweet_1.json", orient="records")
+
+    @staticmethod
+    def prep_tweet(x):
+        print(x.user_retweet)
+        if x.user_retweet is not None:
+            len_username_pattern = len(x.username) + 7
+            text = x.text
+            text_prep = text[len_username_pattern:]
+            return text_prep
+        else:
+            return x.text
 
 
 if __name__ == "__main__":
     CatchTrend(key_trend="niort",
-               start_time="2022-12-06T00:00:00Z",
-               end_time="2022-12-11T12:00:00Z")
+               start_time="2022-12-14T00:00:00Z",
+               end_time="2022-12-14T12:00:00Z")
